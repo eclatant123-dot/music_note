@@ -388,7 +388,30 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const userProvidedConfig = {
+            apiKey: "AIzaSyD7Tt80ur9TPDsINSOuX4ACKXUMpTjNaE4",
+            authDomain: "streaming-f81ae.firebaseapp.com",
+            databaseURL: "https://streaming-f81ae-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "streaming-f81ae",
+            storageBucket: "streaming-f81ae.firebasestorage.app",
+            messagingSenderId: "501253045129",
+            appId: "1:501253045129:web:7ae623ebaa757b21b8bf58"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'music-practice-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userProvidedConfig;
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const db = getFirestore(firebaseApp);
+        const auth = getAuth(firebaseApp);
+
+        let currentUser = null;
+
         const STORAGE_KEY = 'music_practice_app_v3_data';
         
         let appData = {
@@ -403,25 +426,146 @@
             groupId: null
         };
 
-        function loadData() {
+        function loadLocalData() {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
                 try {
-                    appData = JSON.parse(saved);
-                    if (!appData.classCodes) appData.classCodes = {};
+                    const parsed = JSON.parse(saved);
+                    appData.classCodes = parsed.classCodes || {};
+                    appData.groups = parsed.groups || [];
+                    appData.records = parsed.records || [];
                 } catch(e) {
-                    console.error("Data load error", e);
+                    console.error("Local data load error", e);
                 }
             }
         }
 
-        function saveData() {
+        function saveLocalData() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
         }
 
+        async function initAuthAndFirestore() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                    currentUser = cred.user;
+                } else {
+                    const cred = await signInAnonymously(auth);
+                    currentUser = cred.user;
+                }
+            } catch (err) {
+                console.warn("Firebase Auth warning, using offline fallback:", err);
+            }
+
+            if (!currentUser) return;
+
+            const classCodesCol = collection(db, 'artifacts', appId, 'public', 'data', 'classCodes');
+            const groupsCol = collection(db, 'artifacts', appId, 'public', 'data', 'groups');
+            const recordsCol = collection(db, 'artifacts', appId, 'public', 'data', 'records');
+
+            onSnapshot(classCodesCol, (snapshot) => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added" || change.type === "modified") {
+                        appData.classCodes[change.doc.id] = change.doc.data().code;
+                    } else if (change.type === "removed") {
+                        delete appData.classCodes[change.doc.id];
+                    }
+                });
+                saveLocalData();
+                updateCodeHintText();
+            }, (err) => console.error("classCodes sync error:", err));
+
+            onSnapshot(groupsCol, (snapshot) => {
+                let updated = false;
+                snapshot.docChanges().forEach(change => {
+                    const data = change.doc.data();
+                    const idx = appData.groups.findIndex(g => g.id === data.id);
+                    if (change.type === "added" || change.type === "modified") {
+                        if (idx >= 0) appData.groups[idx] = data;
+                        else appData.groups.push(data);
+                        updated = true;
+                    } else if (change.type === "removed") {
+                        if (idx >= 0) appData.groups.splice(idx, 1);
+                        updated = true;
+                    }
+                });
+                saveLocalData();
+                if (updated) {
+                    if (currentState.classId) renderGroups();
+                    if (currentState.groupId) {
+                        const activeG = getActiveGroup();
+                        if (activeG) openGroupDetail(activeG);
+                    }
+                }
+            }, (err) => console.error("groups sync error:", err));
+
+            onSnapshot(recordsCol, (snapshot) => {
+                let updated = false;
+                snapshot.docChanges().forEach(change => {
+                    const data = change.doc.data();
+                    const idx = appData.records.findIndex(r => String(r.id) === String(data.id));
+                    if (change.type === "added" || change.type === "modified") {
+                        if (idx >= 0) appData.records[idx] = data;
+                        else appData.records.push(data);
+                        updated = true;
+                    } else if (change.type === "removed") {
+                        if (idx >= 0) appData.records.splice(idx, 1);
+                        updated = true;
+                    }
+                });
+                saveLocalData();
+                if (updated && currentState.groupId) {
+                    renderRecords();
+                }
+            }, (err) => console.error("records sync error:", err));
+        }
+
+        async function syncClassCode(classId, code) {
+            appData.classCodes[classId] = code;
+            saveLocalData();
+            if (!currentUser) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'classCodes', classId), { code });
+            } catch (e) {
+                console.error("Firestore setDoc classCode error:", e);
+            }
+        }
+
+        async function syncGroup(group) {
+            const idx = appData.groups.findIndex(g => g.id === group.id);
+            if (idx >= 0) appData.groups[idx] = group;
+            else appData.groups.push(group);
+            saveLocalData();
+
+            if (!currentUser) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', group.id), group);
+            } catch (e) {
+                console.error("Firestore setDoc group error:", e);
+            }
+        }
+
+        async function syncRecord(record) {
+            const idx = appData.records.findIndex(r => String(r.id) === String(record.id));
+            if (idx >= 0) appData.records[idx] = record;
+            else appData.records.push(record);
+            saveLocalData();
+
+            if (!currentUser) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', String(record.id)), record);
+            } catch (e) {
+                console.error("Firestore setDoc record error:", e);
+            }
+        }
+
         function updateCodeHintText() {
-            const grade = document.getElementById('gradeSelect').value;
-            const classNum = document.getElementById('classSelect').value;
+            const gradeSelect = document.getElementById('gradeSelect');
+            const classSelect = document.getElementById('classSelect');
+            if (!gradeSelect || !classSelect) return;
+
+            const grade = gradeSelect.value;
+            const classNum = classSelect.value;
             const classId = `${grade}-${classNum}`;
             const hintEl = document.getElementById('codeHintText');
             
@@ -462,8 +606,7 @@
 
             if (!existingCode) {
                 // First time code setup
-                appData.classCodes[classId] = inputCode;
-                saveData();
+                syncClassCode(classId, inputCode);
                 showToast(`${grade}학년 ${classNum}반 입장 코드가 '${inputCode}'(으)로 최초 설정되었습니다.`);
             } else if (existingCode !== inputCode) {
                 showToast('입장 코드가 올바르지 않습니다. 다시 확인해 주세요.');
@@ -498,9 +641,7 @@
             
             const newCode = document.getElementById('newClassCodeInput').value.trim();
             if (newCode) {
-                if (!appData.classCodes) appData.classCodes = {};
-                appData.classCodes[currentState.classId] = newCode;
-                saveData();
+                syncClassCode(currentState.classId, newCode);
                 closeChangeCodeModal();
                 showToast('반 입장 코드가 성공적으로 변경되었습니다.');
             }
@@ -586,9 +727,7 @@
                 ]
             };
             
-            appData.groups.push(newGroup);
-            saveData();
-            
+            syncGroup(newGroup);
             closeNewGroupModal();
             renderGroups();
         });
@@ -653,7 +792,7 @@
             const newSong = document.getElementById('editSongInput').value.trim();
             if (newSong) {
                 group.song = newSong;
-                saveData();
+                syncGroup(group);
                 document.getElementById('detailSongTitleText').textContent = newSong;
                 closeEditSongModal();
                 showToast('연주곡이 수정되었습니다.');
@@ -680,7 +819,7 @@
             const newName = document.getElementById('editGroupNameInput').value.trim();
             if (newName) {
                 group.name = newName;
-                saveData();
+                syncGroup(group);
                 document.getElementById('detailGroupTitleText').textContent = newName;
                 closeEditGroupNameModal();
                 showToast('모둠명이 수정되었습니다.');
@@ -754,7 +893,7 @@
             }
 
             group.members = updatedMembers;
-            saveData();
+            syncGroup(group);
 
             openGroupDetail(group);
             closeManageMembersModal();
@@ -931,16 +1070,17 @@
             const groupAchieved = document.getElementById('groupAchieved').value.trim() || '기록 없음';
             const groupNextGoal = document.getElementById('groupNextGoal').value.trim() || '기록 없음';
 
+            let targetRecord;
             if (editingId) {
-                const record = appData.records.find(r => r.id === Number(editingId));
-                if (record) {
-                    record.date = formattedDate;
-                    record.todayGoal = todayGoal;
-                    record.groupAchieved = groupAchieved;
-                    record.groupNextGoal = groupNextGoal;
+                targetRecord = appData.records.find(r => r.id === Number(editingId));
+                if (targetRecord) {
+                    targetRecord.date = formattedDate;
+                    targetRecord.todayGoal = todayGoal;
+                    targetRecord.groupAchieved = groupAchieved;
+                    targetRecord.groupNextGoal = groupNextGoal;
                 }
             } else {
-                const newRecord = {
+                targetRecord = {
                     id: Date.now(),
                     groupId: currentState.groupId,
                     date: formattedDate,
@@ -949,11 +1089,12 @@
                     groupNextGoal: groupNextGoal,
                     studentData: {}
                 };
-
-                appData.records.push(newRecord);
             }
 
-            saveData();
+            if (targetRecord) {
+                syncRecord(targetRecord);
+            }
+
             closeRecordForm();
             renderRecords();
         });
@@ -1008,18 +1149,37 @@
                     nextGoal: nextGoal
                 };
 
-                saveData();
+                syncRecord(record);
                 renderRecords();
             }
 
             closeStudentRecordModal();
         });
 
-        window.onload = () => {
-            loadData();
-            updateCodeHintText();
-            switchView('view-login');
-        };
+        window.logout = logout;
+        window.openChangeCodeModal = openChangeCodeModal;
+        window.closeChangeCodeModal = closeChangeCodeModal;
+        window.openNewGroupModal = openNewGroupModal;
+        window.closeNewGroupModal = closeNewGroupModal;
+        window.openGroupDetail = openGroupDetail;
+        window.goBackToGroups = goBackToGroups;
+        window.openEditSongModal = openEditSongModal;
+        window.closeEditSongModal = closeEditSongModal;
+        window.openEditGroupNameModal = openEditGroupNameModal;
+        window.closeEditGroupNameModal = closeEditGroupNameModal;
+        window.openManageMembersModal = openManageMembersModal;
+        window.closeManageMembersModal = closeManageMembersModal;
+        window.addMemberInputRow = addMemberInputRow;
+        window.saveMembersList = saveMembersList;
+        window.openRecordForm = openRecordForm;
+        window.closeRecordForm = closeRecordForm;
+        window.openStudentRecordModal = openStudentRecordModal;
+        window.closeStudentRecordModal = closeStudentRecordModal;
+
+        loadLocalData();
+        updateCodeHintText();
+        switchView('view-login');
+        initAuthAndFirestore();
     </script>
 
     <!-- Footer Copyright -->
