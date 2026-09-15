@@ -27,7 +27,7 @@
         }
 
         #view-login.active { display: flex; }
-        #view-group-list.active, #view-group-detail.active, #view-record-form.active { display: block; }
+        #view-group-list.active, #view-status.active, #view-group-detail.active, #view-record-form.active { display: block; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(8px); }
@@ -99,14 +99,19 @@
                 </button>
                 <div class="flex items-center gap-2">
                     <h1 id="classTitle" class="text-xl font-black text-indigo-600">0학년 0반 연습 기록장</h1>
-                    <button onclick="openChangeCodeModal()" title="반 입장 코드 변경/확인" class="text-slate-400 hover:text-indigo-600 w-7 h-7 flex items-center justify-center rounded-full hover:bg-indigo-50 text-xs transition-colors">
+                    <button onclick="openTeacherAdminModal()" title="반 입장 코드 변경" class="text-slate-400 hover:text-indigo-600 w-7 h-7 flex items-center justify-center rounded-full hover:bg-indigo-50 text-xs transition-colors">
                         <i class="fas fa-key"></i>
                     </button>
                 </div>
             </div>
-            <button onclick="openNewGroupModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-bold shadow-sm transition-all flex items-center gap-2">
-                <i class="fas fa-plus"></i> 새 모둠
-            </button>
+            <div class="flex items-center gap-2">
+                <button onclick="openStatusView()" class="bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 px-3.5 py-2 rounded-full text-sm font-bold shadow-sm transition-all flex items-center gap-2">
+                    <i class="fas fa-table"></i> 현황표
+                </button>
+                <button onclick="openNewGroupModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-bold shadow-sm transition-all flex items-center gap-2">
+                    <i class="fas fa-plus"></i> 새 모둠
+                </button>
+            </div>
         </header>
 
         <main class="p-4">
@@ -119,6 +124,71 @@
                 <!-- Group cards generated dynamically -->
             </div>
         </main>
+    </div>
+
+    <!-- Class Status View -->
+    <div id="view-status" class="view-section w-full max-w-6xl mx-auto flex-1 pb-20">
+        <header class="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-20 border-b border-indigo-100 px-4 py-4 flex items-center gap-3">
+            <button onclick="closeStatusView()" class="text-slate-500 hover:text-slate-700 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1 id="statusClassTitle" class="text-xl font-black text-indigo-600">연습 기록 현황표</h1>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">학생별 · 날짜별 개인 연습 기록 작성 여부</p>
+            </div>
+        </header>
+
+        <main class="p-4">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs text-slate-600 font-semibold">
+                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 font-black mr-1">✓</span>
+                        작성 완료
+                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-slate-400 font-black ml-3 mr-1">—</span>
+                        미작성
+                    </p>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button onclick="openIncompleteStudentsModal()" class="bg-white hover:bg-amber-50 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                            <i class="fas fa-user-clock"></i> 미작성 학생 보기
+                        </button>
+                        <p class="hidden md:block text-[11px] text-slate-400 font-medium"><i class="fas fa-arrows-left-right mr-1"></i> 날짜가 많으면 좌우로 밀어서 확인하세요.</p>
+                    </div>
+                </div>
+
+                <div id="statusEmptyState" class="hidden text-center py-16 px-4">
+                    <i class="fas fa-clipboard-list text-4xl text-slate-300 mb-3"></i>
+                    <p class="text-slate-500 font-medium text-sm">현황표에 표시할 학생 또는 연습 기록이 아직 없습니다.</p>
+                </div>
+
+                <div id="statusTableWrap" class="overflow-x-auto">
+                    <table class="w-full min-w-max border-collapse text-sm">
+                        <thead id="statusTableHead" class="bg-indigo-50 text-slate-700"></thead>
+                        <tbody id="statusTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Incomplete Students Modal -->
+    <div id="incompleteStudentsModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex justify-center items-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-3xl card-shadow border border-slate-100 max-h-[82vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-start gap-3 px-5 py-4 border-b border-slate-200 bg-white">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-user-clock text-amber-500"></i> 미작성 학생
+                    </h2>
+                    <p class="text-xs text-slate-500 font-medium mt-1">날짜별로 개인 연습 기록을 작성하지 않은 학생입니다.</p>
+                </div>
+                <button onclick="closeIncompleteStudentsModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 shrink-0">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="incompleteStudentsContent" class="overflow-y-auto flex-1 p-4 space-y-3"></div>
+            <div class="px-4 pb-4">
+                <button onclick="closeIncompleteStudentsModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-sm transition-colors">닫기</button>
+            </div>
+        </div>
     </div>
 
     <div id="view-group-detail" class="view-section w-full max-w-4xl mx-auto flex-1 pb-24">
@@ -258,6 +328,30 @@
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow transition-colors text-sm">
                     저장하기
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Teacher Admin Verification Modal -->
+    <div id="teacherAdminModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex justify-center items-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 card-shadow border border-slate-100">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">교사용 관리자 확인</h2>
+                    <p class="text-xs text-slate-500 mt-1">관리자 비밀번호를 입력하세요.</p>
+                </div>
+                <button type="button" onclick="closeTeacherAdminModal()" class="text-slate-400 hover:text-slate-600 text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="teacherAdminForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">관리자 비밀번호</label>
+                    <input type="password" id="teacherAdminCodeInput" required autocomplete="off" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="관리자 비밀번호">
+                </div>
+                <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl shadow transition-colors text-sm">
+                    확인
                 </button>
             </form>
         </div>
@@ -425,6 +519,9 @@
             groupId: null
         };
 
+        // 교사용 관리자 비밀번호: 필요하면 아래 값만 원하는 번호로 변경하세요.
+        const TEACHER_ADMIN_CODE = '2580';
+
         function loadLocalData() {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
@@ -491,6 +588,7 @@
                 saveLocalData();
                 if (updated) {
                     if (currentState.classId) renderGroups();
+                    if (document.getElementById('view-status')?.classList.contains('active')) renderStatusTable();
                     if (currentState.groupId) {
                         const activeG = getActiveGroup();
                         if (activeG) openGroupDetail(activeG);
@@ -515,6 +613,9 @@
                 saveLocalData();
                 if (updated && currentState.groupId) {
                     renderRecords();
+                }
+                if (updated && document.getElementById('view-status')?.classList.contains('active')) {
+                    renderStatusTable();
                 }
             }, (err) => console.error("records sync error:", err));
         }
@@ -622,12 +723,37 @@
             switchView('view-group-list');
         });
 
+        function openTeacherAdminModal() {
+            if (!currentState.classId) return;
+            document.getElementById('teacherAdminCodeInput').value = '';
+            document.getElementById('teacherAdminModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('teacherAdminCodeInput').focus(), 50);
+        }
+
+        function closeTeacherAdminModal() {
+            document.getElementById('teacherAdminModal').classList.add('hidden');
+            document.getElementById('teacherAdminCodeInput').value = '';
+        }
+
+        document.getElementById('teacherAdminForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('teacherAdminCodeInput').value.trim();
+
+            if (input !== TEACHER_ADMIN_CODE) {
+                showToast('관리자 비밀번호가 올바르지 않습니다.');
+                document.getElementById('teacherAdminCodeInput').select();
+                return;
+            }
+
+            closeTeacherAdminModal();
+            openChangeCodeModal();
+        });
+
         function openChangeCodeModal() {
             if (!currentState.classId) return;
-            const currentCode = (appData.classCodes && appData.classCodes[currentState.classId]) || '';
-            document.getElementById('newClassCodeInput').value = currentCode;
+            document.getElementById('newClassCodeInput').value = '';
             document.getElementById('changeCodeModal').classList.remove('hidden');
-            document.getElementById('newClassCodeInput').focus();
+            setTimeout(() => document.getElementById('newClassCodeInput').focus(), 50);
         }
 
         function closeChangeCodeModal() {
@@ -697,6 +823,272 @@
                     container.appendChild(card);
                 });
             }
+        }
+
+        function getStudentSortKey(name) {
+            const value = String(name || '').trim();
+            const hangulPart = value.match(/[가-힣].*$/);
+            return hangulPart ? hangulPart[0] : value.replace(/^\d+\s*/, '');
+        }
+
+        function formatStatusDate(dateStr) {
+            const parts = String(dateStr || '').split(/[.-]/);
+            if (parts.length >= 3) {
+                return `${Number(parts[1])}/${Number(parts[2])}`;
+            }
+            return dateStr || '';
+        }
+
+        function isStudentRecordComplete(record, student) {
+            if (!record || !record.studentData) return false;
+            const stData = record.studentData[student.memberId] || record.studentData[student.name] || {};
+            return !!(stData.todayPractice && stData.status && stData.nextGoal);
+        }
+
+        function renderStatusTable() {
+            if (!currentState.classId) return;
+
+            const classGroups = appData.groups
+                .filter(g => g.classId === currentState.classId)
+                .sort((a, b) => a.name.localeCompare(b.name, 'ko', { numeric: true }));
+
+            const classGroupIds = new Set(classGroups.map(g => g.id));
+            const classRecords = appData.records.filter(r => classGroupIds.has(r.groupId));
+
+            const students = [];
+            classGroups.forEach(group => {
+                const members = (group.members && group.members.length > 0)
+                    ? group.members
+                    : (group.leader ? [{ id: `leader_${group.id}`, name: group.leader, instrument: '' }] : []);
+
+                members.forEach(member => {
+                    if (!member || !String(member.name || '').trim()) return;
+                    students.push({
+                        key: `${group.id}__${member.id || member.name}`,
+                        groupId: group.id,
+                        groupName: group.name || '',
+                        memberId: member.id || member.name,
+                        name: String(member.name || '').trim(),
+                        instrument: member.instrument || ''
+                    });
+                });
+            });
+
+            students.sort((a, b) => {
+                const byName = getStudentSortKey(a.name).localeCompare(getStudentSortKey(b.name), 'ko', { numeric: true });
+                if (byName !== 0) return byName;
+                return a.name.localeCompare(b.name, 'ko', { numeric: true });
+            });
+
+            const dates = [...new Set(classRecords.map(r => r.date).filter(Boolean))]
+                .sort((a, b) => String(a).localeCompare(String(b), 'ko', { numeric: true }));
+
+            document.getElementById('statusClassTitle').textContent = `${currentState.classLabel || ''} 연습 기록 현황표`;
+
+            students.forEach((student, index) => {
+                student.order = index + 1;
+            });
+
+            const head = document.getElementById('statusTableHead');
+            const body = document.getElementById('statusTableBody');
+            const empty = document.getElementById('statusEmptyState');
+            const wrap = document.getElementById('statusTableWrap');
+
+            head.innerHTML = '';
+            body.innerHTML = '';
+
+            if (students.length === 0 || dates.length === 0) {
+                empty.querySelector('p').textContent = '현황표에 표시할 학생 또는 연습 기록이 아직 없습니다.';
+                empty.classList.remove('hidden');
+                wrap.classList.add('hidden');
+                return;
+            }
+
+            const completionByDate = {};
+            dates.forEach(date => {
+                completionByDate[date] = students.reduce((count, student) => {
+                    const complete = classRecords.some(r =>
+                        r.groupId === student.groupId &&
+                        r.date === date &&
+                        isStudentRecordComplete(r, student)
+                    );
+                    return count + (complete ? 1 : 0);
+                }, 0);
+            });
+
+            const displayStudents = students;
+
+            empty.classList.add('hidden');
+            wrap.classList.remove('hidden');
+
+            head.innerHTML = `
+                <tr>
+                    <th class="sticky left-0 z-10 bg-indigo-50 border-b border-r border-indigo-100 px-4 py-3 text-left font-black min-w-[165px]">
+                        순번 · 학생 이름
+                    </th>
+                    <th class="border-b border-r border-indigo-100 px-3 py-3 text-left font-black min-w-[100px]">
+                        모둠
+                    </th>
+                    ${dates.map(date => `
+                        <th class="border-b border-r border-indigo-100 px-3 py-2 text-center font-black min-w-[82px]" title="${date}">
+                            <div>${formatStatusDate(date)}</div>
+                            <div class="text-[10px] font-bold text-indigo-500 mt-0.5">${completionByDate[date]}/${students.length}</div>
+                        </th>
+                    `).join('')}
+                </tr>
+            `;
+
+            displayStudents.forEach((student, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60';
+
+                const dateCells = dates.map(date => {
+                    const complete = classRecords.some(r =>
+                        r.groupId === student.groupId &&
+                        r.date === date &&
+                        isStudentRecordComplete(r, student)
+                    );
+
+                    if (complete) {
+                        return `
+                            <td class="border-r border-slate-100 px-3 py-3 text-center" title="${date} 작성 완료">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-black text-base">✓</span>
+                            </td>
+                        `;
+                    }
+
+                    return `
+                        <td class="border-r border-slate-100 px-3 py-3 text-center" title="${date} 미작성">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400 font-black text-base">—</span>
+                        </td>
+                    `;
+                }).join('');
+
+                tr.innerHTML = `
+                    <td class="sticky left-0 z-[5] ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'} border-r border-slate-200 px-4 py-3 font-black text-slate-800 whitespace-nowrap">
+                        <div><span class="inline-block min-w-[1.7rem] text-indigo-500">${student.order}.</span>${student.name}</div>
+                        ${student.instrument ? `<div class="text-[10px] text-slate-400 font-medium mt-0.5">${student.instrument}</div>` : ''}
+                    </td>
+                    <td class="border-r border-slate-100 px-3 py-3 text-slate-600 font-semibold whitespace-nowrap">
+                        ${student.groupName}
+                    </td>
+                    ${dateCells}
+                `;
+
+                body.appendChild(tr);
+            });
+        }
+
+        function openStatusView() {
+            renderStatusTable();
+            switchView('view-status');
+        }
+
+        function closeStatusView() {
+            renderGroups();
+            switchView('view-group-list');
+        }
+
+        function openIncompleteStudentsModal() {
+            if (!currentState.classId) return;
+
+            const classGroups = appData.groups
+                .filter(g => g.classId === currentState.classId)
+                .sort((a, b) => a.name.localeCompare(b.name, 'ko', { numeric: true }));
+
+            const classGroupIds = new Set(classGroups.map(g => g.id));
+            const classRecords = appData.records.filter(r => classGroupIds.has(r.groupId));
+
+            const students = [];
+            classGroups.forEach(group => {
+                const members = (group.members && group.members.length > 0)
+                    ? group.members
+                    : (group.leader ? [{ id: `leader_${group.id}`, name: group.leader, instrument: '' }] : []);
+
+                members.forEach(member => {
+                    if (!member || !String(member.name || '').trim()) return;
+                    students.push({
+                        groupId: group.id,
+                        groupName: group.name || '',
+                        memberId: member.id || member.name,
+                        name: String(member.name || '').trim()
+                    });
+                });
+            });
+
+            students.sort((a, b) => {
+                const byName = getStudentSortKey(a.name).localeCompare(getStudentSortKey(b.name), 'ko', { numeric: true });
+                if (byName !== 0) return byName;
+                return a.name.localeCompare(b.name, 'ko', { numeric: true });
+            });
+            students.forEach((student, index) => student.order = index + 1);
+
+            const dates = [...new Set(classRecords.map(r => r.date).filter(Boolean))]
+                .sort((a, b) => String(a).localeCompare(String(b), 'ko', { numeric: true }));
+
+            const content = document.getElementById('incompleteStudentsContent');
+            content.innerHTML = '';
+
+            if (students.length === 0 || dates.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-10">
+                        <i class="fas fa-clipboard-list text-4xl text-slate-300 mb-3"></i>
+                        <p class="text-sm text-slate-500 font-medium">확인할 학생 또는 연습 기록이 아직 없습니다.</p>
+                    </div>
+                `;
+            } else {
+                let hasAnyIncomplete = false;
+
+                dates.forEach(date => {
+                    const incomplete = students.filter(student => !classRecords.some(r =>
+                        r.groupId === student.groupId &&
+                        r.date === date &&
+                        isStudentRecordComplete(r, student)
+                    ));
+
+                    if (incomplete.length === 0) return;
+                    hasAnyIncomplete = true;
+
+                    const section = document.createElement('div');
+                    section.className = 'border border-amber-200 rounded-2xl overflow-hidden bg-amber-50/40';
+                    section.innerHTML = `
+                        <div class="px-4 py-2.5 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-2">
+                            <div class="font-black text-slate-800 text-sm">${date}</div>
+                            <span class="text-[11px] font-bold text-amber-700 bg-white border border-amber-200 px-2 py-0.5 rounded-full">${incomplete.length}명 미작성</span>
+                        </div>
+                        <div class="divide-y divide-amber-100 bg-white">
+                            ${incomplete.map(student => `
+                                <div class="px-4 py-2.5 flex items-center justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <span class="inline-block min-w-[1.8rem] text-indigo-500 font-black text-sm">${student.order}.</span>
+                                        <span class="font-bold text-slate-800 text-sm">${student.name}</span>
+                                    </div>
+                                    <span class="text-[11px] text-slate-500 font-semibold bg-slate-100 px-2 py-1 rounded-lg shrink-0">${student.groupName}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    content.appendChild(section);
+                });
+
+                if (!hasAnyIncomplete) {
+                    content.innerHTML = `
+                        <div class="text-center py-10">
+                            <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <p class="text-sm text-slate-700 font-black">미작성 학생이 없습니다.</p>
+                            <p class="text-xs text-slate-400 font-medium mt-1">모든 학생이 표시된 날짜의 개인 기록을 작성했습니다.</p>
+                        </div>
+                    `;
+                }
+            }
+
+            document.getElementById('incompleteStudentsModal').classList.remove('hidden');
+        }
+
+        function closeIncompleteStudentsModal() {
+            document.getElementById('incompleteStudentsModal').classList.add('hidden');
         }
 
         function openNewGroupModal() {
@@ -1157,7 +1549,13 @@
 
         window.logout = logout;
         window.openChangeCodeModal = openChangeCodeModal;
+        window.openTeacherAdminModal = openTeacherAdminModal;
         window.closeChangeCodeModal = closeChangeCodeModal;
+        window.closeTeacherAdminModal = closeTeacherAdminModal;
+        window.openStatusView = openStatusView;
+        window.closeStatusView = closeStatusView;
+        window.openIncompleteStudentsModal = openIncompleteStudentsModal;
+        window.closeIncompleteStudentsModal = closeIncompleteStudentsModal;
         window.openNewGroupModal = openNewGroupModal;
         window.closeNewGroupModal = closeNewGroupModal;
         window.openGroupDetail = openGroupDetail;
